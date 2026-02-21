@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bebas Neue", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-cyan-neon: #00f5ff;
+  --color-magenta-neon: #ff0090;
+  --color-gold-neon: #ffd700;
+  --color-green-neon: #00ff88;
+  --color-surface-dark: #07090f;
+  --color-surface-darker: #03050a;
+}
+
+@layer base {
+  body {
+    @apply bg-surface-darker text-white antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-zinc-800 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-700;
+  }
+}
+
+.text-glow-cyan {
+  text-shadow: 0 0 15px rgba(0, 245, 255, 0.4);
+}
+
+.text-glow-magenta {
+  text-shadow: 0 0 15px rgba(255, 0, 144, 0.4);
+}
+
+.neon-border {
+  @apply border border-cyan-neon/20 shadow-[0_0_15px_rgba(0,245,255,0.1)];
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 15s ease infinite;
+}
+
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}

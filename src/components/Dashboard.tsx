@@ -1,0 +1,523 @@
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { 
+  Layout, Plus, ExternalLink, Trash2, Clock, Search, ChevronLeft, ChevronRight, 
+  CheckCircle2, Loader2, AlertCircle, Zap, Box, BarChart3, Coins, Settings, 
+  ShieldCheck, HelpCircle, User as UserIcon, LogOut, Download, RefreshCw,
+  Globe, Search as SearchIcon, Database, Palette, Cpu
+} from "lucide-react";
+import ArtifactView from "./ArtifactView";
+import ModelViewer from "./ModelViewer";
+import Templates from "./Templates";
+
+const StatusBadge = ({ status }: { status: string }) => {
+  switch (status.toLowerCase()) {
+    case "completed":
+      return (
+        <span className="flex items-center gap-1.5 px-2 py-1 bg-green-neon/10 text-green-neon text-[10px] font-bold uppercase rounded border border-green-neon/20">
+          <CheckCircle2 className="w-3 h-3" /> Concluído
+        </span>
+      );
+    case "generating":
+      return (
+        <span className="flex items-center gap-1.5 px-2 py-1 bg-cyan-neon/10 text-cyan-neon text-[10px] font-bold uppercase rounded border border-cyan-neon/20">
+          <Loader2 className="w-3 h-3 animate-spin" /> Gerando
+        </span>
+      );
+    case "error":
+      return (
+        <span className="flex items-center gap-1.5 px-2 py-1 bg-magenta-neon/10 text-magenta-neon text-[10px] font-bold uppercase rounded border border-magenta-neon/20">
+          <AlertCircle className="w-3 h-3" /> Erro
+        </span>
+      );
+    default:
+      return (
+        <span className="px-2 py-1 bg-zinc-500/10 text-zinc-400 text-[10px] font-bold uppercase rounded border border-zinc-500/20">
+          {status}
+        </span>
+      );
+  }
+};
+
+interface Project {
+  id: number;
+  name: string;
+  prompt: string;
+  status: string;
+  config: string;
+  created_at: string;
+}
+
+export default function Dashboard({ user, onNewProject }: { user: any, onNewProject: () => void }) {
+  const [activeTab, setActiveTab] = useState<"projects" | "analytics" | "credits" | "settings" | "whitelabel" | "templates" | "seo" | "design" | "backend">("projects");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [totalProjects, setTotalProjects] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const limit = 6;
+
+  useEffect(() => {
+    if (selectedProject) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [selectedProject]);
+
+  useEffect(() => {
+    if (activeTab === "projects") {
+      setLoading(true);
+      const offset = (currentPage - 1) * limit;
+      fetch(`/api/projects/${user.id}?limit=${limit}&offset=${offset}`)
+        .then(res => res.json())
+        .then(data => {
+          setProjects(data.projects);
+          setTotalProjects(data.total);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setLoading(false);
+        });
+    }
+  }, [user.id, currentPage, activeTab]);
+
+  const totalPages = Math.ceil(totalProjects / limit);
+
+  const filteredProjects = projects.filter(p => 
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.prompt.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const NavItem = ({ id, icon: Icon, label, badge }: any) => (
+    <button
+      onClick={() => setActiveTab(id)}
+      className={`w-full flex items-center gap-3 px-6 py-3 text-sm font-medium transition-all border-l-2 ${
+        activeTab === id 
+          ? "text-cyan-neon border-cyan-neon bg-cyan-neon/5" 
+          : "text-zinc-500 border-transparent hover:text-white hover:bg-white/5"
+      }`}
+    >
+      <Icon className="w-4 h-4" />
+      <span className="flex-1 text-left">{label}</span>
+      {badge && (
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+          badge === "Novo" ? "bg-cyan-neon/10 text-cyan-neon" : "bg-white/10 text-zinc-400"
+        }`}>
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+
+  return (
+    <div className="min-h-screen bg-surface-darker flex pt-20 relative z-10">
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-white/5 flex flex-col bg-surface-dark hidden lg:flex">
+        <div className="p-6">
+          <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.2em] mb-4">Principal</div>
+          <div className="space-y-1">
+            <NavItem id="projects" icon={Box} label="Meus Sites" badge={totalProjects.toString()} />
+            <NavItem id="analytics" icon={BarChart3} label="Analytics" />
+            <NavItem id="design" icon={Palette} label="Design 3D" />
+          </div>
+
+          <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.2em] mt-8 mb-4">Ferramentas</div>
+          <div className="space-y-1">
+            <NavItem id="templates" icon={Layout} label="Templates" badge="Novo" />
+            <NavItem id="seo" icon={SearchIcon} label="SEO Engine" />
+            <NavItem id="backend" icon={Database} label="Backend" />
+          </div>
+
+          <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.2em] mt-8 mb-4">Conta</div>
+          <div className="space-y-1">
+            <NavItem id="credits" icon={Coins} label="Créditos" badge={user.credits.toString()} />
+            <NavItem id="settings" icon={Settings} label="Configurações" />
+            <NavItem id="whitelabel" icon={ShieldCheck} label="White Label" />
+          </div>
+        </div>
+
+        <div className="mt-auto p-6 border-t border-white/5">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-neon to-magenta-neon flex items-center justify-center text-xs font-bold text-black">
+              {user.email.substring(0, 2).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-bold text-white truncate">{user.email}</div>
+              <div className="text-[10px] font-mono text-cyan-neon uppercase">Plano Pro</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-12">
+            <div>
+              <h1 className="text-3xl font-display font-bold text-white tracking-wider uppercase">
+                {activeTab === "projects" ? "Meus Sites" : 
+                 activeTab === "analytics" ? "Analytics" : 
+                 activeTab === "credits" ? "Créditos" : 
+                 activeTab === "templates" ? "Templates Premium" :
+                 activeTab === "seo" ? "SEO Engine" :
+                 activeTab === "design" ? "Design 3D" :
+                 activeTab === "backend" ? "Backend Services" :
+                 "Configurações"}
+              </h1>
+              <p className="text-zinc-500 text-sm font-mono mt-1">
+                {activeTab === "projects" ? `${totalProjects} sites gerados · ${user.credits} créditos disponíveis` : 
+                 activeTab === "analytics" ? "Desempenho dos seus sites nos últimos 30 dias" : 
+                 activeTab === "credits" ? "Gerencie seu saldo de créditos" : 
+                 activeTab === "templates" ? "Escolha um ponto de partida profissional" :
+                 activeTab === "seo" ? "Otimize seu site para os motores de busca" :
+                 activeTab === "design" ? "Explore as capacidades 3D da Aetheris" :
+                 activeTab === "backend" ? "Conecte bancos de dados e funções serverless" :
+                 "Ajuste suas preferências"}
+              </p>
+            </div>
+            <button 
+              onClick={onNewProject}
+              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-neon to-magenta-neon text-black font-bold rounded-sm text-sm uppercase tracking-widest hover:scale-105 transition-all shadow-[0_0_20px_rgba(0,245,255,0.2)]"
+            >
+              <Zap className="w-4 h-4" /> Novo Site
+            </button>
+          </div>
+
+          {activeTab === "projects" && (
+            <>
+              <div className="mb-8 relative max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input 
+                  type="text"
+                  placeholder="Buscar projetos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-12 pr-4 text-white focus:ring-2 focus:ring-cyan-neon outline-none transition-all text-sm"
+                />
+              </div>
+
+              {loading ? (
+                <div className="flex items-center justify-center py-24">
+                  <Loader2 className="w-12 h-12 text-cyan-neon animate-spin" />
+                </div>
+              ) : filteredProjects.length === 0 ? (
+                <div className="text-center py-24 bg-white/5 border border-white/5 rounded-3xl">
+                  <Box className="w-16 h-16 text-zinc-700 mx-auto mb-6" />
+                  <h3 className="text-xl font-bold text-white mb-2">Nenhum site encontrado</h3>
+                  <p className="text-zinc-500 mb-8">Tente outro termo de busca ou crie um novo projeto.</p>
+                  <button 
+                    onClick={onNewProject}
+                    className="px-8 py-3 bg-white text-black font-bold rounded-full hover:scale-105 transition-all"
+                  >
+                    Criar Meu Primeiro Site
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1 bg-white/5 border border-white/5">
+                  {filteredProjects.map((project) => (
+                    <motion.div
+                      key={project.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-surface-dark p-6 group hover:bg-surface-darker transition-all relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-neon to-magenta-neon opacity-0 group-hover:opacity-100 transition-opacity" />
+                      
+                      <div className="flex items-start justify-between mb-6">
+                        <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center text-cyan-neon">
+                          <Layout className="w-6 h-6" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => {
+                              try {
+                                const config = JSON.parse(project.config);
+                                setSelectedProject({
+                                  name: project.name,
+                                  files: config.files || [],
+                                  description: project.prompt,
+                                  features: config.features || []
+                                });
+                              } catch (e) {
+                                console.error("Failed to parse project config", e);
+                              }
+                            }}
+                            className="p-2 text-zinc-500 hover:text-white transition-colors"
+                            title="Visualizar"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
+                          <button className="p-2 text-zinc-500 hover:text-magenta-neon transition-colors" title="Excluir">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <h3 className="text-xl font-bold text-white mb-2 truncate group-hover:text-cyan-neon transition-colors">
+                        {project.name || "Site Sem Nome"}
+                      </h3>
+                      <p className="text-zinc-500 text-sm line-clamp-2 mb-8 font-sans">{project.prompt}</p>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                        <div className="flex items-center gap-2 text-zinc-600 text-[10px] font-mono uppercase">
+                          <Clock className="w-3 h-3" />
+                          {new Date(project.created_at).toLocaleDateString()}
+                        </div>
+                        <StatusBadge status={project.status} />
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 mt-12">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                    className="p-2 text-zinc-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <span className="text-sm font-mono text-zinc-400">
+                    Página <span className="text-white">{currentPage}</span> de {totalPages}
+                  </span>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    className="p-2 text-zinc-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === "analytics" && (
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-1 bg-white/5 border border-white/5">
+                {[
+                  { label: "Sites Gerados", value: totalProjects.toString(), change: "↑ +4 esse mês", color: "text-green-neon" },
+                  { label: "Tempo Médio", value: "6:12", change: "↓ -1:30 vs mês ant.", color: "text-cyan-neon" },
+                  { label: "Créditos Usados", value: "1.500", change: "↑ 72% utilização", color: "text-white" },
+                  { label: "SEO Score Médio", value: "94", change: "↑ +6 pontos", color: "text-green-neon" }
+                ].map((stat, i) => (
+                  <div key={i} className="bg-surface-dark p-8">
+                    <div className="text-4xl font-display font-bold text-white">{stat.value}</div>
+                    <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-1">{stat.label}</div>
+                    <div className={`text-[10px] font-mono mt-4 ${stat.color}`}>{stat.change}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-surface-dark p-8 border border-white/5">
+                <h3 className="text-lg font-display font-bold text-white tracking-widest uppercase mb-8">Gerações por Dia — Últimas 4 Semanas</h3>
+                <div className="flex items-end gap-2 h-48">
+                  {Array.from({ length: 28 }).map((_, i) => {
+                    const height = Math.random() * 100;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                        <motion.div 
+                          initial={{ height: 0 }}
+                          animate={{ height: `${height}%` }}
+                          className="w-full bg-gradient-to-t from-cyan-neon to-cyan-neon/30 rounded-t-sm min-h-[4px]"
+                        />
+                        {i % 7 === 0 && <span className="text-[8px] font-mono text-zinc-600">S</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "templates" && (
+            <Templates onSelect={(id) => {
+              console.log("Selected template:", id);
+              onNewProject();
+            }} />
+          )}
+
+          {activeTab === "design" && (
+            <div className="space-y-8">
+              <div className="bg-surface-dark p-8 border border-white/5">
+                <h3 className="text-xl font-display font-bold text-white mb-4 tracking-widest uppercase">Motor 3D Nativo</h3>
+                <p className="text-zinc-500 mb-8 font-sans max-w-2xl">
+                  A Aetheris AI utiliza WebGL e Three.js para renderizar elementos 3D interativos diretamente no navegador. 
+                  Seus sites podem incluir modelos complexos, animações procedurais e materiais dinâmicos.
+                </p>
+                <ModelViewer />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { title: "Materiais PBR", desc: "Reflexos realistas e texturas de alta fidelidade." },
+                  { title: "Animação Física", desc: "Movimentos baseados em física para maior imersão." },
+                  { title: "Otimização", desc: "Modelos leves que carregam instantaneamente." }
+                ].map((feature, i) => (
+                  <div key={i} className="bg-white/5 p-6 border border-white/5">
+                    <div className="text-cyan-neon font-display text-lg mb-2 uppercase tracking-wider">{feature.title}</div>
+                    <p className="text-zinc-500 text-xs font-sans">{feature.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "seo" && (
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-surface-dark p-8 border border-white/5">
+                  <h3 className="text-lg font-display font-bold text-white mb-6 uppercase tracking-widest">Configurações Globais</h3>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block mb-2">Meta Title</label>
+                      <input type="text" className="w-full bg-black/50 border border-white/10 rounded-sm p-3 text-white text-sm focus:border-cyan-neon outline-none" placeholder="Ex: Minha Agência Digital | Especialistas em IA" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block mb-2">Meta Description</label>
+                      <textarea className="w-full bg-black/50 border border-white/10 rounded-sm p-3 text-white text-sm h-24 focus:border-cyan-neon outline-none" placeholder="Descreva seu site para o Google..." />
+                    </div>
+                    <button className="w-full py-3 bg-cyan-neon text-black font-bold text-[10px] uppercase tracking-widest">Salvar Alterações</button>
+                  </div>
+                </div>
+
+                <div className="bg-surface-dark p-8 border border-white/5">
+                  <h3 className="text-lg font-display font-bold text-white mb-6 uppercase tracking-widest">SEO Score</h3>
+                  <div className="flex items-center justify-center py-8">
+                    <div className="relative w-40 h-40">
+                      <svg className="w-full h-full" viewBox="0 0 100 100">
+                        <circle className="text-white/5 stroke-current" strokeWidth="8" fill="transparent" r="40" cx="50" cy="50" />
+                        <circle className="text-green-neon stroke-current" strokeWidth="8" strokeLinecap="round" fill="transparent" r="40" cx="50" cy="50" strokeDasharray="251.2" strokeDashoffset="25.12" />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-4xl font-display font-bold text-white">90</span>
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase">Excelente</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-400">Velocidade de Carregamento</span>
+                      <span className="text-green-neon">Ótimo</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-400">Mobile Friendly</span>
+                      <span className="text-green-neon">Sim</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-400">Sitemap XML</span>
+                      <span className="text-magenta-neon">Pendente</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "backend" && (
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { name: "Supabase", desc: "Banco de dados Postgres e Auth.", icon: Database, color: "text-emerald-400" },
+                  { name: "Firebase", desc: "Realtime DB e Cloud Functions.", icon: Globe, color: "text-orange-400" },
+                  { name: "Custom API", desc: "Conecte seu próprio endpoint REST/GraphQL.", icon: Cpu, color: "text-cyan-neon" }
+                ].map((service, i) => (
+                  <div key={i} className="bg-surface-dark p-8 border border-white/5 group hover:border-cyan-neon/30 transition-all">
+                    <service.icon className={`w-10 h-10 mb-6 ${service.color}`} />
+                    <h3 className="text-xl font-display font-bold text-white mb-2 uppercase tracking-wider">{service.name}</h3>
+                    <p className="text-zinc-500 text-xs font-sans mb-8">{service.desc}</p>
+                    <button className="w-full py-3 bg-white/5 border border-white/10 text-white text-[10px] font-mono uppercase tracking-widest group-hover:bg-white group-hover:text-black transition-all">Configurar</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "credits" && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-8">
+                <div className="bg-surface-dark p-12 border border-white/5 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-10">
+                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,#00f5ff,transparent_50%)]" />
+                  </div>
+                  <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.2em] mb-4">Saldo Atual</div>
+                  <div className="text-8xl font-display font-bold text-gold-neon leading-none">{user.credits}</div>
+                  <div className="text-sm font-mono text-zinc-500 uppercase tracking-widest mt-2">créditos disponíveis</div>
+                  
+                  <div className="grid grid-cols-2 gap-1 bg-white/5 border border-white/5 mt-12">
+                    <div className="bg-surface-darker p-6">
+                      <div className="text-2xl font-display font-bold text-cyan-neon">197</div>
+                      <div className="text-[10px] font-mono text-zinc-500 uppercase mt-1">Do plano Pro</div>
+                    </div>
+                    <div className="bg-surface-darker p-6">
+                      <div className="text-2xl font-display font-bold text-gold-neon">150</div>
+                      <div className="text-[10px] font-mono text-zinc-500 uppercase mt-1">Comprados</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-surface-dark border border-white/5">
+                  <div className="p-6 border-b border-white/5 text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Últimas Transações</div>
+                  <div className="divide-y divide-white/5">
+                    {[
+                      { desc: "Landing Page — Clínica Estética Renova", cost: -1, date: "Hoje 14:20", type: "spend" },
+                      { desc: "E-commerce — Pet Shop Bicho Feliz", cost: -1, date: "Ontem 10:05", type: "spend" },
+                      { desc: "Renovação mensal — Plano Pro", cost: 150, date: "01/02/2026", type: "earn" }
+                    ].map((t, i) => (
+                      <div key={i} className="p-6 flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-bold text-white">{t.desc}</div>
+                          <div className="text-[10px] font-mono text-zinc-600 mt-1">{t.date}</div>
+                        </div>
+                        <div className={`font-mono font-bold ${t.type === "spend" ? "text-magenta-neon" : "text-green-neon"}`}>
+                          {t.type === "spend" ? "-" : "+"}{Math.abs(t.cost)} cr
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <h3 className="text-lg font-display font-bold text-white tracking-widest uppercase">Comprar Créditos</h3>
+                {[
+                  { credits: 100, price: "R$ 29", label: "Ideal para testar" },
+                  { credits: 500, price: "R$ 97", label: "Mais popular" },
+                  { credits: 2000, price: "R$ 247", label: "Melhor custo-benefício" }
+                ].map((pkg, i) => (
+                  <button 
+                    key={i}
+                    className="w-full bg-surface-dark border border-white/10 p-6 flex items-center justify-between group hover:border-cyan-neon/50 transition-all"
+                  >
+                    <div className="text-left">
+                      <div className="text-2xl font-display font-bold text-gold-neon">🪙 {pkg.credits}</div>
+                      <div className="text-[10px] font-mono text-zinc-500 uppercase mt-1">{pkg.label}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-display font-bold text-white">{pkg.price}</div>
+                      <div className="text-[10px] font-mono text-cyan-neon uppercase mt-1 group-hover:underline">Comprar</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      <AnimatePresence>
+        {selectedProject && (
+          <ArtifactView 
+            data={selectedProject} 
+            onClose={() => setSelectedProject(null)} 
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
