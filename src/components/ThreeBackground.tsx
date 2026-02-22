@@ -1,13 +1,12 @@
-import { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Points, PointMaterial, Float, Grid } from '@react-three/drei';
+import { useRef, useMemo, useState } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Points, PointMaterial, Float, Grid, PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 
-function ParticleField() {
+function ParticleField({ count = 2000 }: { count?: number }) {
   const ref = useRef<THREE.Points>(null!);
   
   const [positions, colors] = useMemo(() => {
-    const count = 2000;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const cyan = new THREE.Color("#00f5ff");
@@ -24,11 +23,13 @@ function ParticleField() {
       col[i * 3 + 2] = mixColor.b;
     }
     return [pos, col];
-  }, []);
+  }, [count]);
 
   useFrame((state, delta) => {
-    ref.current.rotation.x -= delta / 20;
-    ref.current.rotation.y -= delta / 30;
+    if (ref.current) {
+      ref.current.rotation.x -= delta / 20;
+      ref.current.rotation.y -= delta / 30;
+    }
   });
 
   return (
@@ -49,8 +50,10 @@ function NeonTorus() {
   const ref = useRef<THREE.Mesh>(null!);
   
   useFrame((state, delta) => {
-    ref.current.rotation.x += delta * 0.2;
-    ref.current.rotation.y += delta * 0.3;
+    if (ref.current) {
+      ref.current.rotation.x += delta * 0.2;
+      ref.current.rotation.y += delta * 0.3;
+    }
   });
 
   return (
@@ -68,37 +71,35 @@ function NeonTorus() {
   );
 }
 
-function FloatingIco() {
-  const ref = useRef<THREE.Mesh>(null!);
-  
-  useFrame((state, delta) => {
-    ref.current.rotation.x -= delta * 0.3;
-    ref.current.rotation.y -= delta * 0.2;
-  });
-
-  return (
-    <Float speed={2} rotationIntensity={1} floatIntensity={2} position={[15, -5, -10]}>
-      <mesh ref={ref}>
-        <icosahedronGeometry args={[5, 1]} />
-        <meshBasicMaterial 
-          color="#ff0090" 
-          wireframe 
-          transparent 
-          opacity={0.05} 
-        />
-      </mesh>
-    </Float>
-  );
-}
-
 export default function ThreeBackground() {
+  const [dpr, setDpr] = useState(1);
+  const [lowPerf, setLowPerf] = useState(false);
+
   return (
     <div className="fixed inset-0 -z-10 bg-surface-darker">
-      <Canvas camera={{ position: [0, 0, 30], fov: 75 }}>
+      <Canvas 
+        dpr={dpr}
+        camera={{ position: [0, 0, 30], fov: 75 }}
+        gl={{ 
+          antialias: !lowPerf,
+          powerPreference: "high-performance",
+          alpha: false,
+          stencil: false,
+          depth: true
+        }}
+      >
+        <PerformanceMonitor 
+          onIncline={() => setDpr(2)} 
+          onDecline={() => {
+            setDpr(1);
+            setLowPerf(true);
+          }} 
+        />
+        
         <ambientLight intensity={0.5} />
-        <ParticleField />
-        <NeonTorus />
-        <FloatingIco />
+        <ParticleField count={lowPerf ? 800 : 2000} />
+        {!lowPerf && <NeonTorus />}
+        
         <Grid 
           infiniteGrid 
           fadeDistance={50} 
@@ -115,6 +116,11 @@ export default function ThreeBackground() {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-surface-darker/20 to-surface-darker" />
       <div className="absolute inset-0 pointer-events-none opacity-20" 
            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")` }} />
+      
+      {/* Performance HUD (Debug) */}
+      <div className="absolute bottom-4 left-4 text-[8px] font-mono text-zinc-700 uppercase tracking-widest pointer-events-none">
+        Aetheris Engine: {lowPerf ? 'Eco Mode' : 'Performance Mode'} | DPR: {dpr}
+      </div>
     </div>
   );
 }

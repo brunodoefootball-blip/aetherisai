@@ -9,6 +9,14 @@ export default function DemoSimulation({ user }: { user?: any }) {
   const [step, setStep] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [prompt, setPrompt] = useState("");
+
+  useEffect(() => {
+    const savedPrompt = localStorage.getItem("selected_template_prompt");
+    if (savedPrompt) {
+      setPrompt(savedPrompt);
+      localStorage.removeItem("selected_template_prompt");
+    }
+  }, []);
   const [backend, setBackend] = useState("none");
   const [seoEnabled, setSeoEnabled] = useState(true);
   const [generatedData, setGeneratedData] = useState<any>(null);
@@ -48,7 +56,8 @@ export default function DemoSimulation({ user }: { user?: any }) {
       }
 
       const result = await resultPromise;
-      setGeneratedData(result);
+      const dataWithId = { ...result, id: Date.now() };
+      setGeneratedData(dataWithId);
       
       if (user) {
         await fetch("/api/projects", {
